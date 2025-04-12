@@ -23,4 +23,13 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+private:
+	UPROPERTY()
+	APawn* DefaultPawn;
+
+	UPROPERTY(EditAnywhere)
+	float InterpSpd = 4;
+
+	UPROPERTY(EditAnywhere)
+	UStaticMeshComponent* DroneMesh;
 };
