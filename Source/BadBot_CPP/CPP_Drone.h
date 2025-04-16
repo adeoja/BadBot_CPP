@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "NiagaraFunctionLibrary.h"
+#include "CPP_BlasterBeam.h"
 #include "CPP_Drone.generated.h"
 
 UCLASS()
@@ -32,4 +34,18 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	UStaticMeshComponent* DroneMesh;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ACPP_BlasterBeam> L_BlasterBeam;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ACPP_BlasterBeam> R_BlasterBeam;
+	
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UNiagaraSystem* BlastEffectAsset;
+
+	UFUNCTION()
+	void FireBlasters();
+
+	FTimerHandle Delay;
 };
