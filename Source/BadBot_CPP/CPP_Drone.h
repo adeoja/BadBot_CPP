@@ -30,9 +30,6 @@ private:
 	APawn* DefaultPawn;
 
 	UPROPERTY(EditAnywhere)
-	float InterpSpd = 4;
-
-	UPROPERTY(EditAnywhere)
 	UStaticMeshComponent* DroneMesh;
 
 	UPROPERTY(EditAnywhere)
@@ -40,12 +37,40 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ACPP_BlasterBeam> R_BlasterBeam;
+
+	UPROPERTY(EditAnywhere)
+	float InterpSpd = 4;
+
+	UPROPERTY(EditAnywhere, Category = "Timer")
+	float DelayStart = 0;
+
+	UPROPERTY(EditAnywhere, Category = "Timer")
+	float DelayBlast = .2;
 	
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	UNiagaraSystem* BlastEffectAsset;
 
 	UFUNCTION()
 	void FireBlasters();
+	
+	UFUNCTION()
+	void Spawn_L_Blaster();
 
-	FTimerHandle Delay;
+	UFUNCTION()
+	void Spawn_R_Blaster();
+
+	UFUNCTION()
+	void DelayTimer();
+
+	FTimerHandle BlastDelay;
+	FTimerHandle StartDelay;
+
+	UPROPERTY(EditAnywhere)
+	USoundBase* BlasterSound;
+
+	UPROPERTY()
+	bool SwitchRifle = false;
+
+	UPROPERTY(EditAnywhere)
+	int MoveSpeed = 100;
 };

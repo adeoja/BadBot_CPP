@@ -4,17 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "NiagaraFunctionLibrary.h"
-#include "CPP_BlasterBeam.generated.h"
+#include "MovingPlatform.generated.h"
 
 UCLASS()
-class BADBOT_CPP_API ACPP_BlasterBeam : public AActor
+class BADBOT_CPP_API AMovingPlatform : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
-	ACPP_BlasterBeam();
+	AMovingPlatform();
 
 protected:
 	// Called when the game starts or when spawned
@@ -25,20 +24,18 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	
 private:
-	UPROPERTY(EditAnywhere)
-	UStaticMeshComponent* BlasterMesh;
-
-	UPROPERTY(EditAnywhere)
-	UNiagaraSystem* BeamBurst;
+	UPROPERTY()
+	FVector StartLocation;
 
 	UPROPERTY()
-	APawn* DefaultPawn;
-
-	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, 
-			   UPrimitiveComponent* OtherComp, FVector NormalImpulse, 
-			   const FHitResult& Hit);
+	FVector TargetLocation;
 	
-	
+	UPROPERTY(EditAnywhere)
+	FVector MoveDistance = FVector(0,0,0);
 
+	UPROPERTY(EditAnywhere)
+	float InterpSpd = 4;
+
+	UPROPERTY()
+	bool bReturn = false;
 };

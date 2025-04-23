@@ -3,18 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CPP_SmallSphere.h"
 #include "GameFramework/Actor.h"
-#include "NiagaraFunctionLibrary.h"
-#include "CPP_BlasterBeam.generated.h"
+#include "CPP_SphereSpawner.generated.h"
 
 UCLASS()
-class BADBOT_CPP_API ACPP_BlasterBeam : public AActor
+class BADBOT_CPP_API ACPP_SphereSpawner : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
-	ACPP_BlasterBeam();
+	ACPP_SphereSpawner();
 
 protected:
 	// Called when the game starts or when spawned
@@ -23,22 +23,19 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	
+
 private:
 	UPROPERTY(EditAnywhere)
-	UStaticMeshComponent* BlasterMesh;
+	float SpawnRadius = 250;
 
 	UPROPERTY(EditAnywhere)
-	UNiagaraSystem* BeamBurst;
+	float SpawnTime = 3;
 
-	UPROPERTY()
-	APawn* DefaultPawn;
+	FTimerHandle SpawnTimer;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ACPP_SmallSphere> SmallSphere;
 
 	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, 
-			   UPrimitiveComponent* OtherComp, FVector NormalImpulse, 
-			   const FHitResult& Hit);
-	
-	
-
+	void SpawnSphere();
 };

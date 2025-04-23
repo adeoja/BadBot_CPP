@@ -1,5 +1,6 @@
 #include "CPP_Drone.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "GameFrameWork/PlayerController.h"
 
 // Sets default values
@@ -19,11 +20,13 @@ void ACPP_Drone::BeginPlay()
 
 	if(APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
 	{
-		DefaultPawn = PlayerController->GetPawn();  
+		DefaultPawn = PlayerController->GetPawn();
+		
 	}
 
-	// Delay before firing blasters
-	GetWorld()->GetTimerManager().SetTimer(Delay, this, &ACPP_Drone::FireBlasters, 3.0f, false);
+	GetWorld()->GetTimerManager().SetTimer(StartDelay, this, &ACPP_Drone::DelayTimer, DelayStart, false);
+	
+	
 }
 
 // Called every frame
@@ -34,46 +37,67 @@ void ACPP_Drone::Tick(float DeltaTime)
 	if (IsValid(DefaultPawn))
 	{
 		FVector DroneLocation = GetActorLocation();
-		FVector PawnLocation = DefaultPawn->GetActorLocation();
 		FRotator DroneRotation = GetActorRotation();
+		
+		FVector PawnLocation = DefaultPawn->GetActorLocation();
 		
 		FRotator LookAtPawn = UKismetMathLibrary::FindLookAtRotation(DroneLocation, PawnLocation);
 		FRotator LookAtPawnInterp = UKismetMathLibrary::RInterpTo(DroneRotation, LookAtPawn, DeltaTime, InterpSpd);
 		SetActorRotation(LookAtPawnInterp);
 
-		FVector L_RifleLoc = DroneMesh->GetSocketLocation("Rifle_L");
-		DrawDebugSphere(GetWorld(), L_RifleLoc, 10, 12, FColor::Purple);
+		FVector MoveLocation = GetActorForwardVector() * DeltaTime * MoveSpeed;
+		AddActorWorldOffset(MoveLocation);
 
+		FVector L_RifleLoc = DroneMesh->GetSocketLocation("Rifle_L");
 		FVector R_RifleLoc = DroneMesh->GetSocketLocation("Rifle_R");
-		DrawDebugSphere(GetWorld(), R_RifleLoc, 10, 12, FColor::Red);
 	}
 }
 
 
 void ACPP_Drone::FireBlasters() 
 {
-	if (DroneMesh && DroneMesh->DoesSocketExist("Rifle_L") && DroneMesh->DoesSocketExist("Rifle_R") && L_BlasterBeam && R_BlasterBeam)
+	if (DroneMesh && DroneMesh->DoesSocketExist("Rifle_L") && DroneMesh->DoesSocketExist("Rifle_R") && L_BlasterBeam && R_BlasterBeam && BlasterSound && BlastEffectAsset)
 	{
-		FVector L_RifleLocation = DroneMesh->GetSocketLocation("Rifle_L");
-		FRotator L_RifleRotation = DroneMesh->GetSocketRotation("Rifle_L");
-		GetWorld()->SpawnActor<ACPP_BlasterBeam>(L_BlasterBeam, L_RifleLocation, L_RifleRotation);
-		if (BlastEffectAsset)
+		if (SwitchRifle)
 		{
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, L_RifleLocation);
+			Spawn_L_Blaster();
 		}
-    
-		FVector R_RifleLocation = DroneMesh->GetSocketLocation("Rifle_R");
-		FRotator R_RifleRotation = DroneMesh->GetSocketRotation("Rifle_R");
-		GetWorld()->SpawnActor<ACPP_BlasterBeam>(R_BlasterBeam, R_RifleLocation, R_RifleRotation);
-		if (BlastEffectAsset)
+		else
 		{
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, R_RifleLocation);
+			Spawn_R_Blaster();
 		}
+		SwitchRifle = !SwitchRifle;
 	}
+	
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Blaster not firing"));
 	}
 }
+
+void ACPP_Drone::Spawn_L_Blaster()
+{
+	FVector L_RifleLocation = DroneMesh->GetSocketLocation("Rifle_L");
+	FRotator L_RifleRotation = DroneMesh->GetSocketRotation("Rifle_L");
+	GetWorld()->SpawnActor<ACPP_BlasterBeam>(L_BlasterBeam, L_RifleLocation, L_RifleRotation);
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, L_RifleLocation);
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlasterSound, L_RifleLocation);
+}
+
+void ACPP_Drone::Spawn_R_Blaster()
+{
+	FVector R_RifleLocation = DroneMesh->GetSocketLocation("Rifle_R");
+	FRotator R_RifleRotation = DroneMesh->GetSocketRotation("Rifle_R");
+	GetWorld()->SpawnActor<ACPP_BlasterBeam>(R_BlasterBeam, R_RifleLocation, R_RifleRotation);
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, R_RifleLocation);
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlasterSound, R_RifleLocation);
+}
+
+void ACPP_Drone::DelayTimer()
+{
+	GetWorld()->GetTimerManager().SetTimer(BlastDelay, this, &ACPP_Drone::FireBlasters, DelayBlast, true);
+}
+
+
 
 
