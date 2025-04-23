@@ -1,103 +1,109 @@
 #include "CPP_Drone.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "GameFrameWork/PlayerController.h"
+#include "GameFramework/PlayerController.h"
+#include "NiagaraFunctionLibrary.h"
 
 // Sets default values
 ACPP_Drone::ACPP_Drone()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+    // Enable Tick() to run every frame
+    PrimaryActorTick.bCanEverTick = true;
 
-	DroneMesh = CreateDefaultSubobject<UStaticMeshComponent>("DroneMesh");
-	RootComponent = DroneMesh;
+    // Create and set the root component for the drone mesh
+    DroneMesh = CreateDefaultSubobject<UStaticMeshComponent>("DroneMesh");
+    RootComponent = DroneMesh;
 }
 
 // Called when the game starts or when spawned
 void ACPP_Drone::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	if(APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
-	{
-		DefaultPawn = PlayerController->GetPawn();
-		
-	}
+    // Get the default pawn (player) reference
+    if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
+    {
+        DefaultPawn = PlayerController->GetPawn();
+    }
 
-	GetWorld()->GetTimerManager().SetTimer(StartDelay, this, &ACPP_Drone::DelayTimer, DelayStart, false);
-	
-	
+    // Set a one-time delay timer before the blaster firing loop starts
+    GetWorld()->GetTimerManager().SetTimer(StartDelay, this, &ACPP_Drone::DelayTimer, DelayStart, false);
 }
 
 // Called every frame
 void ACPP_Drone::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+    Super::Tick(DeltaTime);
 
-	if (IsValid(DefaultPawn))
-	{
-		FVector DroneLocation = GetActorLocation();
-		FRotator DroneRotation = GetActorRotation();
-		
-		FVector PawnLocation = DefaultPawn->GetActorLocation();
-		
-		FRotator LookAtPawn = UKismetMathLibrary::FindLookAtRotation(DroneLocation, PawnLocation);
-		FRotator LookAtPawnInterp = UKismetMathLibrary::RInterpTo(DroneRotation, LookAtPawn, DeltaTime, InterpSpd);
-		SetActorRotation(LookAtPawnInterp);
+    if (IsValid(DefaultPawn))
+    {
+        // Get current location and rotation of the drone and the player
+        FVector DroneLocation = GetActorLocation();
+        FRotator DroneRotation = GetActorRotation();
+        FVector PawnLocation = DefaultPawn->GetActorLocation();
 
-		FVector MoveLocation = GetActorForwardVector() * DeltaTime * MoveSpeed;
-		AddActorWorldOffset(MoveLocation);
+        // Smoothly rotate to face the player using interpolated look-at rotation
+        FRotator LookAtPawn = UKismetMathLibrary::FindLookAtRotation(DroneLocation, PawnLocation);
+        FRotator LookAtPawnInterp = UKismetMathLibrary::RInterpTo(DroneRotation, LookAtPawn, DeltaTime, InterpSpd);
+        SetActorRotation(LookAtPawnInterp);
 
-		FVector L_RifleLoc = DroneMesh->GetSocketLocation("Rifle_L");
-		FVector R_RifleLoc = DroneMesh->GetSocketLocation("Rifle_R");
-	}
+        // Move the drone forward
+        FVector MoveLocation = GetActorForwardVector() * DeltaTime * MoveSpeed;
+        AddActorWorldOffset(MoveLocation);
+    }
 }
 
-
-void ACPP_Drone::FireBlasters() 
+// Called repeatedly after DelayStart to alternate fire between left and right blasters
+void ACPP_Drone::FireBlasters()
 {
-	if (DroneMesh && DroneMesh->DoesSocketExist("Rifle_L") && DroneMesh->DoesSocketExist("Rifle_R") && L_BlasterBeam && R_BlasterBeam && BlasterSound && BlastEffectAsset)
-	{
-		if (SwitchRifle)
-		{
-			Spawn_L_Blaster();
-		}
-		else
-		{
-			Spawn_R_Blaster();
-		}
-		SwitchRifle = !SwitchRifle;
-	}
-	
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Blaster not firing"));
-	}
+    // Check if everything is valid before spawning effects
+    if (DroneMesh && DroneMesh->DoesSocketExist("Rifle_L") && DroneMesh->DoesSocketExist("Rifle_R")
+        && L_BlasterBeam && R_BlasterBeam && BlasterSound && BlastEffectAsset)
+    {
+        // Alternate between firing from left and right sockets
+        if (SwitchRifle)
+        {
+            Spawn_L_Blaster();
+        }
+        else
+        {
+            Spawn_R_Blaster();
+        }
+
+        // Flip the toggle for next shot
+        SwitchRifle = !SwitchRifle;
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Blaster not firing - missing assets or sockets."));
+    }
 }
 
+// Spawns a blaster and effects from the left rifle socket
 void ACPP_Drone::Spawn_L_Blaster()
 {
-	FVector L_RifleLocation = DroneMesh->GetSocketLocation("Rifle_L");
-	FRotator L_RifleRotation = DroneMesh->GetSocketRotation("Rifle_L");
-	GetWorld()->SpawnActor<ACPP_BlasterBeam>(L_BlasterBeam, L_RifleLocation, L_RifleRotation);
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, L_RifleLocation);
-	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlasterSound, L_RifleLocation);
+    FVector L_RifleLocation = DroneMesh->GetSocketLocation("Rifle_L");
+    FRotator L_RifleRotation = DroneMesh->GetSocketRotation("Rifle_L");
+
+    GetWorld()->SpawnActor<ACPP_BlasterBeam>(L_BlasterBeam, L_RifleLocation, L_RifleRotation);
+    UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, L_RifleLocation);
+    UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlasterSound, L_RifleLocation);
 }
 
+// Spawns a blaster and effects from the right rifle socket
 void ACPP_Drone::Spawn_R_Blaster()
 {
-	FVector R_RifleLocation = DroneMesh->GetSocketLocation("Rifle_R");
-	FRotator R_RifleRotation = DroneMesh->GetSocketRotation("Rifle_R");
-	GetWorld()->SpawnActor<ACPP_BlasterBeam>(R_BlasterBeam, R_RifleLocation, R_RifleRotation);
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, R_RifleLocation);
-	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlasterSound, R_RifleLocation);
+    FVector R_RifleLocation = DroneMesh->GetSocketLocation("Rifle_R");
+    FRotator R_RifleRotation = DroneMesh->GetSocketRotation("Rifle_R");
+
+    GetWorld()->SpawnActor<ACPP_BlasterBeam>(R_BlasterBeam, R_RifleLocation, R_RifleRotation);
+    UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BlastEffectAsset, R_RifleLocation);
+    UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlasterSound, R_RifleLocation);
 }
 
+// Called once after DelayStart, then sets up a looping timer to fire blasters
 void ACPP_Drone::DelayTimer()
 {
-	GetWorld()->GetTimerManager().SetTimer(BlastDelay, this, &ACPP_Drone::FireBlasters, DelayBlast, true);
+    // Begin firing the blasters on a loop with interval DelayBlast
+    GetWorld()->GetTimerManager().SetTimer(BlastDelay, this, &ACPP_Drone::FireBlasters, DelayBlast, true);
 }
-
-
-
-
