@@ -1,7 +1,8 @@
 #include "CPP_BlasterBeam.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "GameFramework/PlayerController.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
+
 
 // Sets default values
 ACPP_BlasterBeam::ACPP_BlasterBeam()
@@ -37,11 +38,11 @@ void ACPP_BlasterBeam::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherAct
 {
 	if (OtherActor == DefaultPawn)
 	{
-		UKismetSystemLibrary::QuitGame(this, nullptr, EQuitPreference::Quit, false);
+		// Restart level on hit
+		UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()));
 	}
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), BeamBurst, Hit.Location, UKismetMathLibrary::MakeRotFromX(Hit.Normal));
 	BlasterMesh->DestroyComponent();
-	
 }
 
 
